@@ -56,6 +56,8 @@ Bounce bouncer = Bounce(box_switch, 20); // Let's debounce this mecanical part, 
 int activated = LOW; // By default, no. But we'll check that soon enough in the loop() anyway.
 
 int randNumber = 1; // This is used to choose the next behaviour 
+long randCheck = 1; // Random check when not activated
+boolean hasAlreadyChecked = false;
 boolean mayday = false; // Is set to true when the switch has been changed while doing something. Allows for a quick check in the loop() for what we should do next
 
 /* ----- */
@@ -89,7 +91,7 @@ void move_arm(int degree) {
 
   Serial.print("Moving arm to position : ");
   Serial.print(degree);
-  Serial.println("°.");
+  Serial.println("deg.");
   
   // Update the switch value.
   bouncer.update();
@@ -183,7 +185,7 @@ void backHome() {
 void tryFail(int msec = 5) {  
   current_speed = msec; 
   move_arm(POS_NEAR);
-  move_arm(POS_NEAR + 10); 
+  move_arm(POS_NEAR + 7); 
 }
 // Open the lid to see out
 void goCheck(int msec = 10) {  
@@ -248,11 +250,12 @@ void afraid() {
 // #OhWait 
 void ohWait() {
   if (!mayday) tryFail(0);
+  if (!mayday) backHome();
+  if (!mayday) soft_delay(700);
   if (!mayday) goCheck(2); // Woops. Forgot something ?
   if (!mayday) soft_delay(1000);
   if (!mayday) goFlipThatSwitch(15);
 }
-
 
 
 /* ----- */
@@ -300,6 +303,7 @@ void loop() {
     }
 
     mayday = false; // Now that I have finished, I can rest.
+    hasAlreadyChecked = false; // We can check once after that
 
   } else if (is_home == false) {
 
@@ -307,6 +311,22 @@ void loop() {
     Serial.println("Going back home");
     backHome();
     digitalWrite(led, LOW);
+    
+  } else {
+    
+    if (randCheck < 5 && hasAlreadyChecked == false) {
+      
+      Serial.println("Random check, baby. ");
+      arm.attach(servo);
+      is_home == false;
+      // We only check once after an activation
+      if (!mayday) goCheck();
+      if (!mayday) soft_delay(1500);
+      if (!mayday) backHome();
+      //hasAlreadyChecked = true;
+      
+    }
+  
   }
 
   // if we're home, then we should "power off" the servo (the command, more specifically)
@@ -320,6 +340,9 @@ void loop() {
 
   // Find a new behaviour for next time
   randNumber = random(1, NUMBEHAVIORS);
+  
+  // Random number to check sometimes
+  randCheck = abs(random(1, 1000000));
 
 }
 
