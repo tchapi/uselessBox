@@ -57,8 +57,21 @@ int activated = LOW; // By default, no. But we'll check that soon enough in the 
 
 int randNumber = 1; // This is used to choose the next behaviour 
 long randCheck = 1; // Random check when not activated
-boolean hasAlreadyChecked = false;
+boolean hasAlreadyChecked = true;
 boolean mayday = false; // Is set to true when the switch has been changed while doing something. Allows for a quick check in the loop() for what we should do next
+
+// Sound sensor - triggers a check when double clap is detected
+int soundSensor = A7;
+int soundReading;
+int ambiantSound = 0; // Is calculated afterwards
+int triggerThreshold = 610;  // valeur en plus que le milieu ambiant
+int lastSoundTimestamp = 0;
+
+// Clap parameters
+boolean hasClapped = false;
+int clapInterval = 250; // Interval between two claps
+int clapTolerance = 150; // Tolerance +/- for the claps
+
 
 /* ----- */
 /* SETUP */
@@ -72,6 +85,9 @@ void setup() {
   // Initialize the switch pin as an input 
   pinMode(box_switch, INPUT);
 
+  // Sound Sensor
+  pinMode(soundSensor, INPUT);
+
   // We start at home.
   move_arm(POS_HOME);
   arm.attach(servo);
@@ -79,6 +95,8 @@ void setup() {
   // Debug
   Serial.begin(9600);
   Serial.println("Started.");
+  
+  randomSeed(analogRead(0));
 }
 
 /* ------------------------------- */
@@ -275,6 +293,9 @@ void loop() {
     is_home = false; // We're just leaving !
     arm.attach(servo);
 
+    // Find a new behaviour for next time
+    randNumber = random(1, NUMBEHAVIORS);
+    
     switch(randNumber) { // What animation shall I do today ?
       case 1: // Standard
         goFlipThatSwitch();
@@ -312,21 +333,19 @@ void loop() {
     backHome();
     digitalWrite(led, LOW);
     
-  } else {
-    
-    if (randCheck < 5 && hasAlreadyChecked == false) {
+  } else if ( hasClapped || (randCheck < 5 && hasAlreadyChecked == false)) {
+      
+      // We only check once after an activation
+      hasAlreadyChecked = true;
+      is_home = false;
+      hasClapped = false;
       
       Serial.println("Random check, baby. ");
       arm.attach(servo);
-      is_home == false;
-      // We only check once after an activation
-      if (!mayday) goCheck();
-      if (!mayday) soft_delay(1500);
-      if (!mayday) backHome();
-      //hasAlreadyChecked = true;
       
-    }
-  
+      if (!mayday) goCheck(5);
+      if (!mayday) soft_delay(1000);
+      
   }
 
   // if we're home, then we should "power off" the servo (the command, more specifically)
@@ -336,13 +355,30 @@ void loop() {
     delay(time_to_wait);
     is_home = true;
     arm.detach();
-  }
 
-  // Find a new behaviour for next time
-  randNumber = random(1, NUMBEHAVIORS);
+  }
+  
+  soundReading = analogRead(soundSensor);
+  ambiantSound = (soundReading + 399*ambiantSound) / 400;
+  
+  if (soundReading > triggerThreshold + ambiantSound)
+  {
+    //Serial.println(soundReading);
+    int tps = millis() - lastSoundTimestamp;
+    if( (tps > clapInterval - clapTolerance) && (tps < clapInterval + clapTolerance))
+    {
+      hasClapped = true;
+      Serial.println("User has clapped !");
+    }
+    lastSoundTimestamp = millis();
+    
+    Serial.println(soundReading);
+    Serial.println(triggerThreshold + ambiantSound);
+    
+  }
   
   // Random number to check sometimes
-  randCheck = abs(random(1, 1000000));
+  randCheck = random(1, 1000000);
 
 }
 
