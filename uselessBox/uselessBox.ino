@@ -41,7 +41,7 @@ const int led = 6; // It's the pin
 
 // Servo Motor
 Servo arm;
-const int servo = 3; // It's the pin
+const int servo = 8; // It's the pin
 
 // Servo utilities
 int current_speed = 0; // Set the current speed for the current movement. 0 = full power, X (msec) = wait for X between each degree change
@@ -49,7 +49,7 @@ int last_write = POS_HOME; // Stores the last command passed to the motor so we 
 boolean is_home = true; // By default, we're home (we ensure this in the setup() )
 
 // Switch
-const int box_switch = 8; // It's the pin
+const int box_switch = 2; // It's the pin
 Bounce bouncer = Bounce(box_switch, 20); // Let's debounce this mecanical part, yeah.
 
 // Is the switch activated ?
